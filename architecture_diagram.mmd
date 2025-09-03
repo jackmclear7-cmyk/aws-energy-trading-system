@@ -1,0 +1,118 @@
+graph TB
+    %% Multi-Agent Energy Trading System Architecture
+    
+    subgraph "AI Agents Layer"
+        FA[Forecasting Agent<br/>Claude 3.5 Sonnet<br/>Weather Analysis<br/>Demand Prediction<br/>Price Forecasting]
+        PA[Producer Agent<br/>Claude 3.5 Sonnet<br/>Solar Farm Management<br/>Battery Optimization<br/>Market Participation]
+        CA[Consumer Agent<br/>Claude 3.5 Sonnet<br/>Factory Optimization<br/>Battery Management<br/>Demand Response]
+        MSA[Market Supervisor Agent<br/>Claude 3.5 Sonnet<br/>Order Matching<br/>Price Discovery<br/>Trade Settlement]
+        GOA[Grid Optimization Agent<br/>Claude 3.5 Sonnet<br/>Grid Monitoring<br/>Stability Management<br/>Emergency Response]
+    end
+    
+    subgraph "Communication Layer"
+        A2A[A2A Protocol<br/>Agent-to-Agent Communication<br/>Message Routing<br/>Event Broadcasting<br/>Real-time Coordination]
+    end
+    
+    subgraph "AWS Bedrock Services"
+        BEDROCK[AWS Bedrock<br/>Foundation Models<br/>Agent Management<br/>Tool Integration<br/>Session Management]
+    end
+    
+    subgraph "MCP Tools Layer"
+        WF[Weather Forecast<br/>Lambda Function<br/>Solar Irradiance<br/>Cloud Cover<br/>Wind Speed]
+        HD[Historical Data<br/>Lambda Function<br/>Price History<br/>Demand Patterns<br/>Supply Trends]
+        TA[Trading API<br/>Lambda Function<br/>Order Submission<br/>Trade Execution<br/>Market Data]
+        GM[Grid Management<br/>Lambda Function<br/>Frequency Monitoring<br/>Voltage Control<br/>Stability Metrics]
+        ET[Energy Trading Actions<br/>Lambda Function<br/>Unified API<br/>Data Processing<br/>Tool Orchestration]
+    end
+    
+    subgraph "Data Storage Layer"
+        subgraph "DynamoDB Tables"
+            EM[Energy Metrics<br/>Production Data<br/>Consumption Data<br/>Efficiency Metrics]
+            MD[Market Data<br/>Price Information<br/>Trading Volumes<br/>Market Status]
+            FD[Forecast Data<br/>Weather Predictions<br/>Demand Forecasts<br/>Price Projections]
+            PM[Producer Metrics<br/>Solar Production<br/>Battery Status<br/>Revenue Data]
+            CM[Consumer Metrics<br/>Energy Consumption<br/>Battery Usage<br/>Cost Data]
+            GM_TABLE[Grid Metrics<br/>Frequency Data<br/>Voltage Readings<br/>Stability Scores]
+            TD[Trade Data<br/>Order Records<br/>Trade History<br/>Settlement Data]
+        end
+    end
+    
+    subgraph "Data Lake"
+        S3[Amazon S3<br/>Historical Data<br/>Configuration Files<br/>Logs & Analytics<br/>Backup Storage]
+    end
+    
+    subgraph "Monitoring & Security"
+        CW[CloudWatch<br/>Dashboards<br/>Logs<br/>Alarms<br/>Metrics]
+        IAM[IAM Security<br/>BedrockAgentRole<br/>Policies<br/>Permissions<br/>Access Control]
+    end
+    
+    %% Agent Connections
+    FA --> A2A
+    PA --> A2A
+    CA --> A2A
+    MSA --> A2A
+    GOA --> A2A
+    
+    %% Bedrock Integration
+    FA --> BEDROCK
+    PA --> BEDROCK
+    CA --> BEDROCK
+    MSA --> BEDROCK
+    GOA --> BEDROCK
+    
+    %% MCP Tool Connections
+    FA --> WF
+    FA --> HD
+    PA --> TA
+    PA --> GM
+    CA --> TA
+    CA --> GM
+    MSA --> TA
+    GOA --> GM
+    
+    %% Lambda Function Connections
+    WF --> ET
+    HD --> ET
+    TA --> ET
+    GM --> ET
+    
+    %% Data Storage Connections
+    ET --> EM
+    ET --> MD
+    ET --> FD
+    ET --> PM
+    ET --> CM
+    ET --> GM_TABLE
+    ET --> TD
+    
+    %% S3 Connections
+    ET --> S3
+    CW --> S3
+    
+    %% Security Connections
+    BEDROCK --> IAM
+    ET --> IAM
+    
+    %% Monitoring Connections
+    BEDROCK --> CW
+    ET --> CW
+    EM --> CW
+    MD --> CW
+    FD --> CW
+    PM --> CW
+    CM --> CW
+    GM_TABLE --> CW
+    TD --> CW
+    
+    %% Styling
+    classDef agentClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef awsClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef dataClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef toolClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef securityClass fill:#ffebee,stroke:#b71c1c,stroke-width:2px
+    
+    class FA,PA,CA,MSA,GOA agentClass
+    class BEDROCK,S3,CW awsClass
+    class EM,MD,FD,PM,CM,GM_TABLE,TD dataClass
+    class WF,HD,TA,GM,ET,A2A toolClass
+    class IAM securityClass

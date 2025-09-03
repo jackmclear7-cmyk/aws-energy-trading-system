@@ -1,0 +1,49 @@
+{
+  "name": "aws-agents-energy-demo",
+  "version": "1.0.0",
+  "description": "Multi-Agent Energy Trading and Grid Optimization System",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "deploy": "cdk deploy --all",
+    "destroy": "cdk destroy --all",
+    "diff": "cdk diff",
+    "synth": "cdk synth",
+    "bootstrap": "cdk bootstrap",
+    "lambda:build": "cd lambda && npm run build",
+    "lambda:deploy": "cd lambda && npm run deploy"
+  },
+  "keywords": [
+    "aws",
+    "bedrock",
+    "agents",
+    "energy",
+    "trading",
+    "grid",
+    "optimization"
+  ],
+  "author": "AWS Agents Demo Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.5.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "aws-cdk": "^2.100.0",
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.3.0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1500.0",
+    "axios": "^1.6.0",
+    "ws": "^8.14.0",
+    "uuid": "^9.0.0",
+    "moment": "^2.29.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
