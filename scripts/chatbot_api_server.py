@@ -12,6 +12,8 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import threading
 from chatbot_bedrock_integration import ChatbotBedrockIntegration
+from strands_orchestrator import process_strands_query
+import asyncio
 
 # Configure logging
 logging.basicConfig(
@@ -64,7 +66,8 @@ class ChatbotAPIHandler(BaseHTTPRequestHandler):
             'services': {
                 'bedrock': 'connected',
                 'dynamodb': 'connected',
-                'lambda': 'connected'
+                'lambda': 'connected',
+                'strands': 'connected'
             }
         }
         self.send_json_response(health_data)
@@ -84,13 +87,37 @@ class ChatbotAPIHandler(BaseHTTPRequestHandler):
                 self.send_error_response("Message is required")
                 return
             
-            # Process the message
+            # Try Strands first, fallback to existing system
+            logger.info(f"🤖 Processing message: {user_message}")
+            
+            try:
+                # Try Strands first
+                logger.info("🔄 Attempting Strands processing...")
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    result = loop.run_until_complete(process_strands_query(user_message))
+                    if result.get('status') == 'success':
+                        logger.info("✅ Strands processing successful")
+                        self.send_json_response(result)
+                        return
+                    else:
+                        logger.warning("⚠️ Strands processing failed, falling back to existing system")
+                finally:
+                    loop.close()
+            except Exception as e:
+                logger.warning(f"⚠️ Strands error: {e}, falling back to existing system")
+            
+            # Fallback to existing system
+            logger.info("🔄 Using existing Bedrock integration as fallback")
             result = self.integration.handle_chatbot_request(user_message)
+            result['source'] = 'AWS Bedrock Integration (Fallback)'
             self.send_json_response(result)
             
         except json.JSONDecodeError:
             self.send_error_response("Invalid JSON")
         except Exception as e:
+            logger.error(f"❌ Error in chat handler: {e}")
             self.send_error_response(str(e))
     
     def send_json_response(self, data):

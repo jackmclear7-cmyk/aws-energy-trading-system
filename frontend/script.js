@@ -388,11 +388,24 @@ class EnergyTradingDashboard {
         
         return events;
     }
+
+    // Methods for chatbot integration
+    onMetricUpdate(callback) {
+        this.metricUpdateCallback = callback;
+    }
+
+    onWorkflowStepComplete(callback) {
+        this.workflowStepCallback = callback;
+    }
+
+    onAgentStatusChange(callback) {
+        this.agentStatusCallback = callback;
+    }
 }
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new EnergyTradingDashboard();
+    window.energyTradingDashboard = new EnergyTradingDashboard();
 });
 
 // Add CSS animations

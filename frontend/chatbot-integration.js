@@ -51,8 +51,15 @@ class EnergyTradingChatbotIntegration {
     setupEventListeners() {
         // Floating chat button
         const floatingBtn = document.getElementById('floatingChatBtn');
+        console.log('🔍 Looking for floating chat button:', floatingBtn);
         if (floatingBtn) {
-            floatingBtn.addEventListener('click', () => this.toggleChat());
+            console.log('✅ Found floating chat button, adding event listener');
+            floatingBtn.addEventListener('click', () => {
+                console.log('🖱️ Chat button clicked!');
+                this.toggleChat();
+            });
+        } else {
+            console.error('❌ Floating chat button not found!');
         }
 
         // Chat controls
@@ -99,26 +106,41 @@ class EnergyTradingChatbotIntegration {
     }
 
     toggleChat() {
+        console.log('🔄 Toggling chat, current state:', this.isOpen);
         const chatbot = document.getElementById('chatbotContainer');
         const floatingBtn = document.getElementById('floatingChatBtn');
         
+        console.log('🔍 Chatbot container:', chatbot);
+        console.log('🔍 Floating button:', floatingBtn);
+        
         if (this.isOpen) {
+            console.log('📤 Closing chat');
             this.closeChat();
         } else {
+            console.log('📥 Opening chat');
             this.openChat();
         }
     }
 
     openChat() {
+        console.log('📥 Opening chat...');
         const chatbot = document.getElementById('chatbotContainer');
         const floatingBtn = document.getElementById('floatingChatBtn');
         
+        console.log('🔍 Chatbot container found:', chatbot);
+        console.log('🔍 Floating button found:', floatingBtn);
+        
         if (chatbot) {
+            console.log('✅ Adding show class to chatbot');
             chatbot.classList.add('show');
             this.isOpen = true;
+            console.log('✅ Chat is now open');
+        } else {
+            console.error('❌ Chatbot container not found!');
         }
         
         if (floatingBtn) {
+            console.log('✅ Hiding floating button');
             floatingBtn.style.display = 'none';
         }
         
@@ -126,7 +148,10 @@ class EnergyTradingChatbotIntegration {
         setTimeout(() => {
             const messageInput = document.getElementById('messageInput');
             if (messageInput) {
+                console.log('🎯 Focusing on input');
                 messageInput.focus();
+            } else {
+                console.error('❌ Message input not found!');
             }
         }, 300);
     }
@@ -272,19 +297,23 @@ class EnergyTradingChatbotIntegration {
     }
 
     generateBotResponse(userMessage) {
+        console.log('🤖 Generating bot response for:', userMessage);
         // Try to get response from API first
         this.getAPIResponse(userMessage).then(response => {
+            console.log('📨 API Response received:', response);
             if (response && response.status === 'success') {
+                console.log('✅ Using API response');
                 this.addMessage('bot', response.response);
                 this.triggerDashboardInteraction(userMessage, response.response);
             } else {
+                console.log('⚠️ API response failed, using fallback');
                 // Fallback to local response
                 const localResponse = this.getBotResponse(userMessage);
                 this.addMessage('bot', localResponse);
                 this.triggerDashboardInteraction(userMessage, localResponse);
             }
         }).catch(error => {
-            console.error('API request failed:', error);
+            console.error('❌ Error getting API response:', error);
             // Fallback to local response
             const localResponse = this.getBotResponse(userMessage);
             this.addMessage('bot', localResponse);
@@ -292,8 +321,9 @@ class EnergyTradingChatbotIntegration {
         });
     }
 
-    async getAPIResponse(userMessage) {
+        async getAPIResponse(userMessage) {
         try {
+            console.log('🌐 Calling API for message:', userMessage);
             const response = await fetch('http://localhost:8081/api/chat', {
                 method: 'POST',
                 headers: {
@@ -303,14 +333,18 @@ class EnergyTradingChatbotIntegration {
                     message: userMessage
                 })
             });
+
+            console.log('📡 API Response status:', response.status);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
-            return await response.json();
+
+            const data = await response.json();
+            console.log('✅ API Response data:', data);
+            return data;
         } catch (error) {
-            console.error('API request failed:', error);
+            console.error('❌ API request failed:', error);
             return null;
         }
     }
@@ -625,8 +659,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Add CSS for dashboard highlighting
-const style = document.createElement('style');
-style.textContent = `
+const chatbotStyle = document.createElement('style');
+chatbotStyle.textContent = `
     .dashboard-highlight {
         animation: highlightPulse 2s ease-in-out;
         box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
@@ -671,4 +705,4 @@ style.textContent = `
         }
     }
 `;
-document.head.appendChild(style);
+document.head.appendChild(chatbotStyle);

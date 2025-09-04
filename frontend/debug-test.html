@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather API Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🌤️ Weather API Debug Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Direct API Call</h2>
+        <button onclick="testDirectAPI()">Test Direct API Call</button>
+        <div id="directResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Chatbot Integration</h2>
+        <button onclick="testChatbotIntegration()">Test Chatbot Integration</button>
+        <div id="chatbotResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Console Logs</h2>
+        <p>Open browser console (F12) to see detailed logs</p>
+    </div>
+
+    <script>
+        async function testDirectAPI() {
+            const resultDiv = document.getElementById('directResult');
+            resultDiv.innerHTML = '🔄 Testing...';
+            
+            try {
+                console.log('🌐 Testing direct API call...');
+                const response = await fetch('http://localhost:8081/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: 'What is the weather tomorrow in London?'
+                    })
+                });
+                
+                console.log('📡 API Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ API Response data:', data);
+                
+                resultDiv.innerHTML = `
+                    <h3>✅ API Call Successful</h3>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                    <p><strong>Response:</strong></p>
+                    <pre>${data.response}</pre>
+                    <p><strong>Raw Data:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('❌ API call failed:', error);
+                resultDiv.innerHTML = `
+                    <h3>❌ API Call Failed</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testChatbotIntegration() {
+            const resultDiv = document.getElementById('chatbotResult');
+            resultDiv.innerHTML = '🔄 Testing...';
+            
+            try {
+                // Simulate the chatbot integration logic
+                console.log('🤖 Testing chatbot integration...');
+                
+                const response = await fetch('http://localhost:8081/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: 'What is the weather tomorrow in London?'
+                    })
+                });
+                
+                console.log('📡 Chatbot API Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Chatbot API Response data:', data);
+                
+                if (data && data.status === 'success') {
+                    resultDiv.innerHTML = `
+                        <h3>✅ Chatbot Integration Working</h3>
+                        <p><strong>Using API Response:</strong> Yes</p>
+                        <p><strong>Response:</strong></p>
+                        <pre>${data.response}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3>⚠️ Chatbot Integration Issue</h3>
+                        <p><strong>API Response Status:</strong> ${data.status}</p>
+                        <p><strong>Would use fallback:</strong> Yes</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ Chatbot integration failed:', error);
+                resultDiv.innerHTML = `
+                    <h3>❌ Chatbot Integration Failed</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Would use fallback:</strong> Yes</p>
+                `;
+            }
+        }
+        
+        // Auto-run tests on page load
+        window.onload = function() {
+            console.log('🚀 Debug test page loaded');
+            setTimeout(testDirectAPI, 1000);
+        };
+    </script>
+</body>
+</html>
+

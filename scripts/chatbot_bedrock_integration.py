@@ -10,7 +10,8 @@ import time
 import logging
 import boto3
 from botocore.exceptions import ClientError
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+from datetime import datetime, timedelta
 
 # Configure logging
 logging.basicConfig(
@@ -95,28 +96,82 @@ class ChatbotBedrockIntegration:
                 }
             }
     
-    def get_weather_forecast(self) -> Dict:
-        """Get weather forecast from Lambda function"""
+    def get_weather_forecast(self, location_name: str = None, date_info: Dict = None) -> Dict:
+        """Get weather forecast from AWS Weather Lambda function"""
         try:
-            # Call weather forecast Lambda
+            # Get location coordinates
+            location = self.get_location_coordinates(location_name)
+            
+            # Determine forecast parameters based on date info
+            hours = 24  # Default
+            target_date = None
+            
+            if date_info:
+                if date_info.get('offset_days', 0) > 0:
+                    # For future dates, request more hours to cover the target day
+                    hours = min(168, (date_info['offset_days'] + 1) * 24)  # Max 7 days
+                    target_date = date_info.get('target_date')
+                elif date_info.get('specific_time'):
+                    # For specific times, request 24 hours to find the time period
+                    hours = 24
+            
+            # Call weather forecast Lambda function
+            payload = {
+                'action': 'get_forecast',
+                'hours': hours,
+                'location': location
+            }
+            
+            # Add date information if available
+            if target_date:
+                payload['target_date'] = target_date.isoformat()
+                logger.info(f"📅 Sending target_date to Lambda: {target_date.isoformat()}")
+            if date_info and date_info.get('specific_time'):
+                payload['target_time'] = date_info['specific_time']
+                logger.info(f"⏰ Sending target_time to Lambda: {date_info['specific_time']}")
+            
+            logger.info(f"📤 Weather Lambda payload: {payload}")
+            
             response = self.lambda_client.invoke(
                 FunctionName='weather-forecast',
                 InvocationType='RequestResponse',
-                Payload=json.dumps({
-                    'action': 'get_forecast',
-                    'hours': 24
-                })
+                Payload=json.dumps(payload)
             )
             
             result = json.loads(response['Payload'].read())
-            return {
-                'status': 'success',
-                'forecast': result,
-                'timestamp': time.time()
-            }
+            
+            # Check if Lambda function returned success
+            if result.get('statusCode') == 200:
+                body = json.loads(result.get('body', '{}'))
+                forecast_data = body.get('forecast', [])
+                
+                if forecast_data:
+                    # Get the first forecast (current conditions or target date)
+                    current_forecast = forecast_data[0]
+                    
+                    # If we have a target date, show that in the response
+                    response_data = {
+                        'status': 'success',
+                        'forecast': current_forecast,
+                        'source': 'Simulated Weather Data (Demo - Not Real)',
+                        'timestamp': time.time(),
+                        'full_forecast': forecast_data[:12]  # Next 12 hours
+                    }
+                    
+                    # Add target date information if available
+                    if target_date:
+                        response_data['target_date'] = target_date.isoformat()
+                        response_data['target_date_info'] = f"Forecast for {target_date.strftime('%A, %B %d, %Y')}"
+                    
+                    return response_data
+                else:
+                    raise Exception("No forecast data returned from Lambda")
+            else:
+                raise Exception(f"Lambda function error: {result}")
             
         except Exception as e:
             logger.error(f"Error getting weather forecast: {e}")
+            # Fallback to mock data if Lambda function fails
             return {
                 'status': 'error',
                 'error': str(e),
@@ -124,9 +179,136 @@ class ChatbotBedrockIntegration:
                     'temperature': 24,
                     'cloud_cover': 15,
                     'wind_speed': 8,
-                    'solar_irradiance': 920
-                }
+                    'solar_irradiance': 920,
+                    'humidity': 65,
+                    'pressure': 1013,
+                    'visibility': 10,
+                    'uv_index': 6,
+                    'precipitation_probability': 0,
+                    'solar_efficiency': 0.85
+                },
+                'source': 'Mock Data (Lambda unavailable)'
             }
+    
+    def get_location_coordinates(self, location_name: str = None) -> Dict:
+        """Get coordinates for a location name"""
+        if not location_name:
+            return {'latitude': 40.7128, 'longitude': -74.0060}  # NYC default
+        
+        location_name = location_name.lower().strip()
+        
+        # City coordinate mappings
+        city_coordinates = {
+            'london': {'latitude': 51.5074, 'longitude': -0.1278},
+            'manchester': {'latitude': 53.4808, 'longitude': -2.2426},
+            'birmingham': {'latitude': 52.4862, 'longitude': -1.8904},
+            'new york': {'latitude': 40.7128, 'longitude': -74.0060},
+            'nyc': {'latitude': 40.7128, 'longitude': -74.0060},
+            'los angeles': {'latitude': 34.0522, 'longitude': -118.2437},
+            'sydney': {'latitude': -33.8688, 'longitude': 151.2093},
+            'paris': {'latitude': 48.8566, 'longitude': 2.3522},
+            'tokyo': {'latitude': 35.6762, 'longitude': 139.6503},
+            'berlin': {'latitude': 52.5200, 'longitude': 13.4050}
+        }
+        
+        # Check for exact matches
+        if location_name in city_coordinates:
+            return city_coordinates[location_name]
+        
+        # Check for partial matches
+        for city, coords in city_coordinates.items():
+            if city in location_name or location_name in city:
+                return coords
+        
+        # Default to NYC if no match found
+        return {'latitude': 40.7128, 'longitude': -74.0060}
+    
+    def extract_location_from_query(self, query: str) -> str:
+        """Extract location name from user query"""
+        query_lower = query.lower()
+        
+        # Common location patterns
+        location_patterns = [
+            'in london', 'for london', 'london',
+            'in manchester', 'for manchester', 'manchester',
+            'in new york', 'for new york', 'new york', 'nyc',
+            'in los angeles', 'for los angeles', 'los angeles',
+            'in sydney', 'for sydney', 'sydney',
+            'in paris', 'for paris', 'paris',
+            'in tokyo', 'for tokyo', 'tokyo',
+            'in berlin', 'for berlin', 'berlin'
+        ]
+        
+        for pattern in location_patterns:
+            if pattern in query_lower:
+                # Extract the city name
+                if 'in ' in pattern:
+                    return pattern.replace('in ', '')
+                elif 'for ' in pattern:
+                    return pattern.replace('for ', '')
+                else:
+                    return pattern
+        
+        return None  # No location found
+    
+    def extract_date_from_query(self, query: str) -> Dict[str, Any]:
+        """Extract date/time information from user query"""
+        query_lower = query.lower()
+        
+        # Day of week patterns
+        days_of_week = {
+            'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+            'friday': 4, 'saturday': 5, 'sunday': 6,
+            'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6
+        }
+        
+        # Time patterns
+        time_patterns = {
+            'morning': {'hour': 9, 'period': 'morning'},
+            'afternoon': {'hour': 14, 'period': 'afternoon'},
+            'evening': {'hour': 18, 'period': 'evening'},
+            'night': {'hour': 21, 'period': 'night'},
+            'today': {'offset_days': 0},
+            'tomorrow': {'offset_days': 1},
+            'yesterday': {'offset_days': -1}
+        }
+        
+        result = {
+            'target_date': None,
+            'target_time': None,
+            'offset_days': 0,
+            'specific_time': None
+        }
+        
+        # Check for specific days
+        for day_name, day_num in days_of_week.items():
+            if day_name in query_lower:
+                # Calculate days until that day
+                today = datetime.now()
+                current_day = today.weekday()
+                days_until = (day_num - current_day) % 7
+                if days_until == 0 and 'next' not in query_lower:
+                    days_until = 7  # Next week
+                elif 'next' in query_lower:
+                    days_until = 7 + (day_num - current_day) % 7
+                
+                result['target_date'] = today + timedelta(days=days_until)
+                result['offset_days'] = days_until
+                break
+        
+        # Check for time periods
+        for time_key, time_info in time_patterns.items():
+            if time_key in query_lower:
+                if 'offset_days' in time_info:
+                    result['offset_days'] = time_info['offset_days']
+                    if result['target_date'] is None:
+                        result['target_date'] = datetime.now() + timedelta(days=time_info['offset_days'])
+                else:
+                    result['target_time'] = time_info
+                    result['specific_time'] = time_info['period']
+                break
+        
+        return result
     
     def get_market_analysis(self) -> Dict:
         """Get market analysis from Lambda function"""
@@ -248,7 +430,10 @@ class ChatbotBedrockIntegration:
             data = self.get_system_status()
             response_type = 'system_status'
         elif any(word in query_lower for word in ['weather', 'forecast', 'solar']):
-            data = self.get_weather_forecast()
+            # Extract location and date from query
+            location_name = self.extract_location_from_query(query)
+            date_info = self.extract_date_from_query(query)
+            data = self.get_weather_forecast(location_name, date_info)
             response_type = 'weather_forecast'
         elif any(word in query_lower for word in ['price', 'market', 'trading']):
             data = self.get_market_analysis()
@@ -298,23 +483,59 @@ Would you like me to show you more details about any specific area?"""
 
         elif response_type == 'weather_forecast':
             forecast = data.get('forecast', {})
-            return f"""🌤️ **Weather Forecast Analysis:**
+            full_forecast = data.get('full_forecast', [])
+            source = data.get('source', 'Unknown')
+            target_date_info = data.get('target_date_info', '')
+            
+            # Calculate solar generation estimate for current hour
+            irradiance = forecast.get('solar_irradiance', 920)
+            efficiency = forecast.get('solar_efficiency', 0.85)
+            expected_generation = round(irradiance * 0.5 * efficiency, 1)  # 0.5 MW per 1000 W/m²
+            
+            # Determine conditions quality
+            cloud_cover = forecast.get('cloud_cover', 15)
+            if cloud_cover < 20:
+                conditions = "excellent"
+                emoji = "☀️"
+            elif cloud_cover < 50:
+                conditions = "good"
+                emoji = "⛅"
+            else:
+                conditions = "moderate"
+                emoji = "☁️"
+            
+            # Build multi-hour forecast summary
+            forecast_summary = ""
+            if full_forecast and len(full_forecast) > 1:
+                forecast_summary = "\n\n📅 **12-Hour Forecast Summary:**\n"
+                for i, hour_data in enumerate(full_forecast[:12]):  # Show next 12 hours
+                    hour_time = hour_data.get('timestamp', '').split('T')[1][:5] if hour_data.get('timestamp') else f"+{i}h"
+                    temp = hour_data.get('temperature', 0)
+                    clouds = hour_data.get('cloud_cover', 0)
+                    solar = hour_data.get('solar_irradiance', 0)
+                    forecast_summary += f"• {hour_time}: {temp}°C, {clouds}% clouds, {solar} W/m² solar\n"
+            
+            return f"""🌤️ **Weather Forecast Analysis** ({source})
+{target_date_info}
 
-**Tomorrow's Conditions:**
-• Temperature: {forecast.get('temperature', 24)}°C (ideal for solar)
-• Cloud cover: {forecast.get('cloud_cover', 15)}% (excellent conditions)
-• Wind speed: {forecast.get('wind_speed', 8)} mph (minimal impact)
-• Solar irradiance: {forecast.get('solar_irradiance', 920)} W/m² (high)
+{emoji} **Current Conditions:**
+• Temperature: {forecast.get('temperature', 24)}°C
+• Cloud cover: {forecast.get('cloud_cover', 15)}% ({conditions} conditions)
+• Wind speed: {forecast.get('wind_speed', 8)} m/s
+• Humidity: {forecast.get('humidity', 65)}%
+• Solar irradiance: {forecast.get('solar_irradiance', 920)} W/m²
+• Solar efficiency: {forecast.get('solar_efficiency', 0.85):.1%}
 
 ☀️ **Solar Production Impact:**
-• Expected generation: 520 MW (+15% vs today)
-• Peak hours: 6 hours (10 AM - 4 PM)
-• Battery charging opportunity: High
+• Expected generation: {expected_generation} MW
+• Peak efficiency: {forecast.get('solar_efficiency', 0.85):.1%}
+• UV index: {forecast.get('uv_index', 6)} (moderate)
+• Precipitation chance: {forecast.get('precipitation_probability', 0)}%{forecast_summary}
 
 💡 **Recommendation:**
-Consider increasing direct sales to the grid during peak hours. The high solar irradiance suggests excellent production conditions.
+{'Excellent conditions for solar generation. Consider maximizing production and direct grid sales.' if cloud_cover < 20 else 'Good conditions with some cloud cover. Monitor for optimal production windows.' if cloud_cover < 50 else 'Moderate conditions. Consider battery storage optimization.'}
 
-Would you like me to adjust the production strategy based on this forecast?"""
+Would you like me to show more detailed hourly data or adjust the production strategy?"""
 
         elif response_type == 'market_analysis':
             analysis = data.get('analysis', {})

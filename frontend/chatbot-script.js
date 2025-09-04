@@ -125,11 +125,23 @@ class EnergyTradingChatbot {
             // Show typing indicator
             this.showTypingIndicator();
             
-            // Simulate bot response
-            setTimeout(() => {
+            // Try to get response from API first
+            this.getAPIResponse(message).then(response => {
                 this.hideTypingIndicator();
-                this.generateBotResponse(message);
-            }, 1500);
+                if (response && response.status === 'success') {
+                    this.addMessage('bot', response.response);
+                } else {
+                    // Fallback to local response
+                    const localResponse = this.generateBotResponse(message);
+                    this.addMessage('bot', localResponse);
+                }
+            }).catch(error => {
+                console.error('API request failed:', error);
+                this.hideTypingIndicator();
+                // Fallback to local response
+                const localResponse = this.generateBotResponse(message);
+                this.addMessage('bot', localResponse);
+            });
         }
     }
 
@@ -207,6 +219,34 @@ class EnergyTradingChatbot {
         const typingIndicator = document.getElementById('typingIndicator');
         if (typingIndicator) {
             typingIndicator.remove();
+        }
+    }
+
+    async getAPIResponse(userMessage) {
+        try {
+            console.log('🌐 Calling API for message:', userMessage);
+            const response = await fetch('http://localhost:8081/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: userMessage
+                })
+            });
+
+            console.log('📡 API Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('✅ API Response data:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ API request failed:', error);
+            return null;
         }
     }
 

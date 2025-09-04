@@ -517,7 +517,7 @@ section h2 i {
     backdrop-filter: blur(20px);
     border-radius: 20px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
-    display: flex;
+    display: none;
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -528,6 +528,7 @@ section h2 i {
 }
 
 .chatbot-container.show {
+    display: flex;
     transform: translateY(0);
     opacity: 1;
 }

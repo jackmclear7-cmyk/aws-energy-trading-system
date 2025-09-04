@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Chat Integration Test</h1>
+    
+    <div class="test-section">
+        <h3>API Server Test</h3>
+        <button onclick="testAPI()">Test API Connection</button>
+        <div id="apiResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Dashboard Integration Test</h3>
+        <button onclick="testDashboard()">Test Dashboard Integration</button>
+        <div id="dashboardResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Chat Test</h3>
+        <input type="text" id="chatInput" placeholder="Enter a message" style="width: 300px;">
+        <button onclick="testChat()">Send Message</button>
+        <div id="chatResult"></div>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.innerHTML = '<span class="info">Testing API...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8081/api/health');
+                if (response.ok) {
+                    resultDiv.innerHTML = '<span class="success">✅ API Server is running</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ API Server returned error: ' + response.status + '</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ API Server connection failed: ' + error.message + '</span>';
+            }
+        }
+        
+        function testDashboard() {
+            const resultDiv = document.getElementById('dashboardResult');
+            
+            if (window.energyTradingDashboard) {
+                resultDiv.innerHTML = '<span class="success">✅ Dashboard is available</span>';
+            } else {
+                resultDiv.innerHTML = '<span class="error">❌ Dashboard is not available</span>';
+            }
+        }
+        
+        async function testChat() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            const resultDiv = document.getElementById('chatResult');
+            
+            if (!message) {
+                resultDiv.innerHTML = '<span class="error">Please enter a message</span>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<span class="info">Sending message...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8081/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = '<span class="success">✅ Chat response received:</span><br><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ Chat API error: ' + response.status + '</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Chat API failed: ' + error.message + '</span>';
+            }
+        }
+        
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            testAPI();
+            testDashboard();
+        });
+    </script>
+</body>
+</html>
+

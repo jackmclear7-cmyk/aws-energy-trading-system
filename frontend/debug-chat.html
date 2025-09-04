@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        #floatingChatBtn { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            width: 60px; 
+            height: 60px; 
+            background: #8B5CF6; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            cursor: pointer; 
+            z-index: 1000;
+        }
+        #chatbotContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 400px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1001;
+        }
+        #chatbotContainer.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Debug Page</h1>
+    
+    <div class="debug-section">
+        <h3>DOM Elements Check</h3>
+        <button onclick="checkElements()">Check Elements</button>
+        <div id="elementResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Event Listener Test</h3>
+        <button onclick="testEventListener()">Test Event Listener</button>
+        <div id="eventResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Console Logs</h3>
+        <div id="consoleLogs"></div>
+    </div>
+
+    <!-- Chat Elements -->
+    <div class="floating-chat-btn" id="floatingChatBtn">
+        <i class="fas fa-comments"></i>
+        <span class="notification-badge" id="notificationBadge">3</span>
+    </div>
+
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chat-header">
+            <div class="chat-title">
+                <i class="fas fa-robot"></i>
+                <span>Energy Trading Assistant</span>
+            </div>
+            <div class="chat-controls">
+                <button id="minimizeBtn">−</button>
+                <button id="closeBtn">×</button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <p>Hello! I'm your Energy Trading Assistant. How can I help you today?</p>
+                </div>
+            </div>
+        </div>
+        <div class="chat-input-container">
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your message...">
+                <button id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></script>
+    <script>
+        function checkElements() {
+            const results = document.getElementById('elementResults');
+            const floatingBtn = document.getElementById('floatingChatBtn');
+            const chatbot = document.getElementById('chatbotContainer');
+            
+            let html = '<h4>Element Check Results:</h4>';
+            html += `<p>Floating Button: <span class="${floatingBtn ? 'success' : 'error'}">${floatingBtn ? '✅ Found' : '❌ Not Found'}</span></p>`;
+            html += `<p>Chatbot Container: <span class="${chatbot ? 'success' : 'error'}">${chatbot ? '✅ Found' : '❌ Not Found'}</span></p>`;
+            
+            if (floatingBtn) {
+                html += `<p>Button Style: ${window.getComputedStyle(floatingBtn).display}</p>`;
+                html += `<p>Button Position: ${window.getComputedStyle(floatingBtn).position}</p>`;
+            }
+            
+            results.innerHTML = html;
+        }
+        
+        function testEventListener() {
+            const results = document.getElementById('eventResults');
+            const floatingBtn = document.getElementById('floatingChatBtn');
+            
+            if (floatingBtn) {
+                floatingBtn.addEventListener('click', () => {
+                    results.innerHTML = '<p class="success">✅ Click event fired!</p>';
+                    console.log('Click event fired!');
+                });
+                results.innerHTML = '<p class="success">✅ Event listener added</p>';
+            } else {
+                results.innerHTML = '<p class="error">❌ Cannot add event listener - button not found</p>';
+            }
+        }
+        
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const logContainer = document.getElementById('consoleLogs');
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logContainer.innerHTML += '<p class="info">LOG: ' + args.join(' ') + '</p>';
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logContainer.innerHTML += '<p class="error">ERROR: ' + args.join(' ') + '</p>';
+        };
+        
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            checkElements();
+            testEventListener();
+        });
+    </script>
+</body>
+</html>
+
